@@ -14,7 +14,7 @@
     }
 
     .container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
     }
 
@@ -40,7 +40,7 @@
 
     .member-row {
       display: grid;
-      grid-template-columns: 1.4fr 1fr 1fr;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
       gap: 10px;
       margin-bottom: 10px;
     }
@@ -103,18 +103,25 @@
     }
 
     .player {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
       gap: 10px;
+      align-items: center;
       padding: 10px;
       background: #1e293b;
       border-radius: 10px;
       margin-bottom: 8px;
     }
 
+    .assigned-lane {
+      color: #38bdf8;
+      font-weight: 800;
+    }
+
     .score {
       color: #facc15;
       font-weight: 700;
+      margin-top: 12px;
     }
 
     .warning {
@@ -130,12 +137,16 @@
       line-height: 1.7;
     }
 
-    @media (max-width: 800px) {
+    @media (max-width: 900px) {
       .member-row {
         grid-template-columns: 1fr;
       }
 
       .teams {
+        grid-template-columns: 1fr;
+      }
+
+      .player {
         grid-template-columns: 1fr;
       }
     }
@@ -144,7 +155,7 @@
 <body>
   <div class="container">
     <h1>LOL カスタム チーム分けツール</h1>
-    <p class="description">名前・ランク帯・希望レーンを入力して、平均戦力が近くなるように5vs5へ自動分けします。</p>
+    <p class="description">名前・ランク帯・第一希望レーン・第二希望レーンを入力して、平均戦力が近くなるように5vs5へ自動分けします。</p>
 
     <div class="card">
       <h2>メンバー入力</h2>
@@ -152,7 +163,7 @@
 
       <div class="buttons">
         <button class="secondary" onclick="addMember()">メンバー追加</button>
-        <button class="primary" onclick="balanceTeams()">チーム分けする</button>
+        <button class="primary" onclick="balanceTeams()">チーム分けをする</button>
         <button class="danger" onclick="resetAll()">リセット</button>
       </div>
 
@@ -193,7 +204,8 @@
       { name: "Challenger", score: 10 }
     ];
 
-    const lanes = ["TOP", "JG", "MID", "ADC", "SUP", "どこでも"];
+    const laneOrder = ["TOP", "JG", "MID", "ADC", "SUP"];
+    const laneOptions = ["TOP", "JG", "MID", "ADC", "SUP", "どこでも"];
     const membersDiv = document.getElementById("members");
 
     function createMemberRow(index) {
@@ -205,8 +217,11 @@
         <select class="rank">
           ${ranks.map(r => `<option value="${r.score}">${r.name}</option>`).join("")}
         </select>
-        <select class="lane">
-          ${lanes.map(l => `<option value="${l}">${l}</option>`).join("")}
+        <select class="lane1">
+          ${laneOptions.map(l => `<option value="${l}">第一希望：${l}</option>`).join("")}
+        </select>
+        <select class="lane2">
+          ${laneOptions.map(l => `<option value="${l}">第二希望：${l}</option>`).join("")}
         </select>
       `;
 
@@ -237,10 +252,11 @@
         const name = row.querySelector(".name").value.trim();
         const rankScore = Number(row.querySelector(".rank").value);
         const rankName = ranks.find(r => r.score === rankScore).name;
-        const lane = row.querySelector(".lane").value;
+        const lane1 = row.querySelector(".lane1").value;
+        const lane2 = row.querySelector(".lane2").value;
 
         if (name) {
-          members.push({ name, rankScore, rankName, lane, id: index });
+          members.push({ name, rankScore, rankName, lane1, lane2, id: index });
         }
       });
 
@@ -249,23 +265,6 @@
 
     function teamScore(team) {
       return team.reduce((sum, member) => sum + member.rankScore, 0);
-    }
-
-    function lanePenalty(team) {
-      const laneCount = {};
-      let penalty = 0;
-
-      team.forEach(member => {
-        if (member.lane !== "どこでも") {
-          laneCount[member.lane] = (laneCount[member.lane] || 0) + 1;
-        }
-      });
-
-      Object.values(laneCount).forEach(count => {
-        if (count > 1) penalty += (count - 1) * 2;
-      });
-
-      return penalty;
     }
 
     function combination(array, size) {
@@ -288,6 +287,71 @@
       return result;
     }
 
+    function shuffle(array) {
+      const copied = [...array];
+      for (let i = copied.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copied[i], copied[j]] = [copied[j], copied[i]];
+      }
+      return copied;
+    }
+
+    function assignLanes(team) {
+      const assigned = [];
+      const usedLanes = new Set();
+      const shuffledTeam = shuffle(team);
+
+      laneOrder.forEach(lane => {
+        let candidate = shuffledTeam.find(member =>
+          !assigned.some(a => a.id === member.id) && member.lane1 === lane
+        );
+
+        if (!candidate) {
+          candidate = shuffledTeam.find(member =>
+            !assigned.some(a => a.id === member.id) && member.lane2 === lane
+          );
+        }
+
+        if (!candidate) {
+          candidate = shuffledTeam.find(member =>
+            !assigned.some(a => a.id === member.id) && (member.lane1 === "どこでも" || member.lane2 === "どこでも")
+          );
+        }
+
+        if (!candidate) {
+          candidate = shuffledTeam.find(member =>
+            !assigned.some(a => a.id === member.id)
+          );
+        }
+
+        if (candidate) {
+          assigned.push({ ...candidate, assignedLane: lane });
+          usedLanes.add(lane);
+        }
+      });
+
+      return assigned.sort((a, b) => laneOrder.indexOf(a.assignedLane) - laneOrder.indexOf(b.assignedLane));
+    }
+
+    function laneEvaluation(team) {
+      const assigned = assignLanes(team);
+      let penalty = 0;
+
+      assigned.forEach(member => {
+        if (member.lane1 === member.assignedLane) {
+          penalty += 0;
+        } else if (member.lane2 === member.assignedLane) {
+          penalty += 1;
+        } else if (member.lane1 === "どこでも" || member.lane2 === "どこでも") {
+          penalty += 2;
+        } else {
+          penalty += 5;
+        }
+      });
+
+      return penalty;
+    }
+
     function balanceTeams() {
       const warning = document.getElementById("warning");
       warning.textContent = "";
@@ -299,29 +363,35 @@
         return;
       }
 
-      const combos = combination(members, 5);
-      let best = null;
-      let bestScore = Infinity;
+      const combos = shuffle(combination(members, 5));
+      const evaluated = [];
 
       combos.forEach(teamA => {
         const ids = new Set(teamA.map(m => m.id));
         const teamB = members.filter(m => !ids.has(m.id));
 
         const scoreDiff = Math.abs(teamScore(teamA) - teamScore(teamB));
-        const penalty = lanePenalty(teamA) + lanePenalty(teamB);
-        const totalEvaluation = scoreDiff * 10 + penalty;
+        const lanePenalty = laneEvaluation(teamA) + laneEvaluation(teamB);
+        const randomBonus = Math.random() * 2;
+        const totalEvaluation = scoreDiff * 10 + lanePenalty + randomBonus;
 
-        if (totalEvaluation < bestScore) {
-          bestScore = totalEvaluation;
-          best = { teamA, teamB, scoreDiff, penalty };
-        }
+        evaluated.push({ teamA, teamB, scoreDiff, lanePenalty, totalEvaluation });
       });
 
-      renderTeam("teamA", "teamAScore", "teamALanes", best.teamA);
-      renderTeam("teamB", "teamBScore", "teamBLanes", best.teamB);
+      evaluated.sort((a, b) => a.totalEvaluation - b.totalEvaluation);
 
-      if (best.penalty > 0) {
-        warning.textContent = "注意：ランク差を優先しているため、一部レーンが被っている可能性があります。";
+      // 上位候補の中からランダムに選ぶことで、ボタンを押すたびに別パターンが出やすくなる
+      const topCandidates = evaluated.slice(0, Math.min(15, evaluated.length));
+      const best = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+
+      const assignedTeamA = assignLanes(best.teamA);
+      const assignedTeamB = assignLanes(best.teamB);
+
+      renderTeam("teamA", "teamAScore", "teamALanes", assignedTeamA);
+      renderTeam("teamB", "teamBScore", "teamBLanes", assignedTeamB);
+
+      if (best.lanePenalty > 0) {
+        warning.textContent = "注意：ランク差と希望レーンを考慮しているため、一部の人が第一希望以外のレーンになる場合があります。";
       }
     }
 
@@ -336,19 +406,19 @@
         const div = document.createElement("div");
         div.className = "player";
         div.innerHTML = `
+          <span class="assigned-lane">${member.assignedLane}</span>
           <span>${member.name}</span>
-          <span>${member.rankName} / ${member.lane}</span>
+          <span>${member.rankName} / 希望:${member.lane1}, ${member.lane2}</span>
         `;
         teamDiv.appendChild(div);
       });
 
       scoreDiv.textContent = "合計ランクスコア：" + teamScore(team);
 
-      const laneText = lanes
-        .filter(l => l !== "どこでも")
+      const laneText = laneOrder
         .map(lane => {
-          const names = team.filter(m => m.lane === lane).map(m => m.name);
-          return `${lane}: ${names.length ? names.join("、") : "なし"}`;
+          const player = team.find(m => m.assignedLane === lane);
+          return `${lane}: ${player ? player.name : "なし"}`;
         })
         .join(" / ");
 
