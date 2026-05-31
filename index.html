@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LOL / VALORANT チーム分けツール</title>
   <style>
-    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e5e7eb;margin:0;padding:24px}.container{max-width:1200px;margin:0 auto}h1{text-align:center;margin-bottom:8px}.description{text-align:center;color:#94a3b8;margin-bottom:24px}.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}.top-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.member-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px}input,select,button,textarea{border-radius:10px;border:1px solid #475569;padding:10px;font-size:14px;box-sizing:border-box}input,select,textarea{background:#0f172a;color:#e5e7eb;width:100%}button{cursor:pointer;border:none;font-weight:700}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.primary{background:#38bdf8;color:#082f49}.secondary{background:#475569;color:#e5e7eb}.danger{background:#ef4444;color:white}.copy{background:#22c55e;color:#052e16}.teams{display:grid;grid-template-columns:1fr 1fr;gap:20px}.team{background:#020617;border:1px solid #334155;border-radius:16px;padding:16px}.team h2{margin-top:0}.player{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;padding:10px;background:#1e293b;border-radius:10px;margin-bottom:8px}.role-label{color:#38bdf8;font-weight:800}.score{color:#facc15;font-weight:700;margin-top:12px}.warning{color:#fca5a5;margin-top:12px;white-space:pre-line}.success{color:#86efac;margin-top:12px}.summary{font-size:13px;color:#cbd5e1;margin-top:10px;line-height:1.7}textarea{min-height:150px;margin-top:12px;resize:vertical}@media(max-width:950px){.top-controls,.member-row,.teams{grid-template-columns:1fr}.player{grid-template-columns:1fr}}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#e5e7eb;margin:0;padding:24px}.container{max-width:1200px;margin:0 auto}h1{text-align:center;margin-bottom:8px}.description{text-align:center;color:#94a3b8;margin-bottom:24px}.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}.top-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.member-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px}input,select,button,textarea{border-radius:10px;border:1px solid #475569;padding:10px;font-size:14px;box-sizing:border-box}input,select,textarea{background:#0f172a;color:#e5e7eb;width:100%}button{cursor:pointer;border:none;font-weight:700}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.primary{background:#38bdf8;color:#082f49}.secondary{background:#475569;color:#e5e7eb}.danger{background:#ef4444;color:white}.copy{background:#22c55e;color:#052e16}.teams{display:grid;grid-template-columns:1fr 1fr;gap:20px}.team{background:#020617;border:1px solid #334155;border-radius:16px;padding:16px}.team h2{margin-top:0}.player{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;padding:10px;background:#1e293b;border-radius:10px;margin-bottom:8px}.role-label{color:#38bdf8;font-weight:800}.score{color:#facc15;font-weight:700;margin-top:12px}.warning{color:#fca5a5;margin-top:12px;white-space:pre-line}.success{color:#86efac;margin-top:12px}.summary{font-size:13px;color:#cbd5e1;margin-top:10px;line-height:1.7}.map-box{display:none;margin-top:16px}.map-result{font-size:20px;font-weight:800;color:#facc15;margin-top:10px}textarea{min-height:150px;margin-top:12px;resize:vertical}@media(max-width:950px){.top-controls,.member-row,.teams{grid-template-columns:1fr}.player{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -23,6 +23,25 @@
       <select id="memberCountSelect" onchange="resetAll()">
         <option value="10">10人 / 5vs5</option>
       </select>
+    </div>
+
+    <div id="valorantMapBox" class="map-box">
+      <h3>VALORANT MAP設定</h3>
+      <select id="valorantMapSelect">
+        <option value="random">ランダム</option>
+        <option value="Ascent">Ascent</option>
+        <option value="Bind">Bind</option>
+        <option value="Haven">Haven</option>
+        <option value="Split">Split</option>
+        <option value="Lotus">Lotus</option>
+        <option value="Sunset">Sunset</option>
+        <option value="Icebox">Icebox</option>
+        <option value="Breeze">Breeze</option>
+        <option value="Fracture">Fracture</option>
+        <option value="Pearl">Pearl</option>
+        <option value="Abyss">Abyss</option>
+      </select>
+      <div id="selectedMapResult" class="map-result"></div>
     </div>
   </div>
 
@@ -50,6 +69,9 @@
 </div>
 
 <script>
+const valorantMaps=["Ascent","Bind","Haven","Split","Lotus","Sunset","Icebox","Breeze","Fracture","Pearl","Abyss"];
+let currentValorantMap="";
+
 const gameSettings={
   lol:{
     label:"League of Legends",
@@ -66,32 +88,167 @@ const gameSettings={
     ranks:[
       {name:"Iron",score:1},{name:"Bronze",score:2},{name:"Silver",score:3},{name:"Gold",score:4},{name:"Platinum",score:5},{name:"Diamond",score:6},{name:"Ascendant",score:7},{name:"Immortal",score:8},{name:"Radiant",score:9}
     ],
-    roles:["Duelist","Initiator","Sentinel","Controller","Flex"],
+    roles:["デュエリスト","イニシエーター","コントローラー","センチネル","なんでも"],
     extraRole:"なんでも",
     roleName1:"第一希望ロール",
     roleName2:"第二希望ロール"
   }
 };
+
 let lastTeamA=[],lastTeamB=[];
 const membersDiv=document.getElementById("members");
-function currentSettings(){return gameSettings[document.getElementById("gameSelect").value]}
-function targetMemberCount(){return 10}
-function targetTeamSize(){return 5}
-function roleOptions(){const s=currentSettings();return[...s.roles,s.extraRole]}
-function createMemberRow(index){const s=currentSettings();const options=roleOptions();const row=document.createElement("div");row.className="member-row";row.innerHTML=`<input type="text" placeholder="メンバー${index+1}の名前" class="name"/><select class="rank">${s.ranks.map(r=>`<option value="${r.score}">${r.name}</option>`).join("")}</select><select class="role1">${options.map(r=>`<option value="${r}">${s.roleName1}：${r}</option>`).join("")}</select><select class="role2">${options.map(r=>`<option value="${r}">${s.roleName2}：${r}</option>`).join("")}</select>`;membersDiv.appendChild(row)}
+function currentGame(){return document.getElementById("gameSelect").value}
+function currentSettings(){return gameSettings[currentGame()]}
+function isValorant(){return currentGame()==="valorant"}
+function roleOptions(){const s=currentSettings();return s.roles}
+
+function updateGameDisplay(){
+  document.getElementById("valorantMapBox").style.display=isValorant()?"block":"none";
+  if(!isValorant()){
+    currentValorantMap="";
+    document.getElementById("selectedMapResult").textContent="";
+  }
+}
+
+function createMemberRow(index){
+  const s=currentSettings();
+  const options=roleOptions();
+  const row=document.createElement("div");
+  row.className="member-row";
+  row.innerHTML=`<input type="text" placeholder="メンバー${index+1}の名前" class="name"/><select class="rank">${s.ranks.map(r=>`<option value="${r.score}">${r.name}</option>`).join("")}</select><select class="role1">${options.map(r=>`<option value="${r}">${s.roleName1}：${r}</option>`).join("")}</select><select class="role2">${options.map(r=>`<option value="${r}">${s.roleName2}：${r}</option>`).join("")}</select>`;
+  membersDiv.appendChild(row);
+}
+
 function addMember(){createMemberRow(document.querySelectorAll(".member-row").length)}
-function resetAll(){membersDiv.innerHTML="";["teamA","teamB"].forEach(id=>document.getElementById(id).innerHTML="");["teamAScore","teamBScore","teamASummary","teamBSummary","warning","success"].forEach(id=>document.getElementById(id).textContent="");document.getElementById("copyText").value="";lastTeamA=[];lastTeamB=[];for(let i=0;i<10;i++)createMemberRow(i)}
-function getMembers(){const s=currentSettings();const members=[];document.querySelectorAll(".member-row").forEach((row,index)=>{const name=row.querySelector(".name").value.trim();const rankScore=Number(row.querySelector(".rank").value);const rankName=s.ranks.find(r=>r.score===rankScore).name;const role1=row.querySelector(".role1").value;const role2=row.querySelector(".role2").value;if(name)members.push({name,rankScore,rankName,role1,role2,id:index})});return members}
+
+function resetAll(){
+  updateGameDisplay();
+  membersDiv.innerHTML="";
+  ["teamA","teamB"].forEach(id=>document.getElementById(id).innerHTML="");
+  ["teamAScore","teamBScore","teamASummary","teamBSummary","warning","success"].forEach(id=>document.getElementById(id).textContent="");
+  document.getElementById("copyText").value="";
+  document.getElementById("selectedMapResult").textContent="";
+  currentValorantMap="";
+  lastTeamA=[];lastTeamB=[];
+  for(let i=0;i<10;i++)createMemberRow(i);
+}
+
+function getMembers(){
+  const s=currentSettings();
+  const members=[];
+  document.querySelectorAll(".member-row").forEach((row,index)=>{
+    const name=row.querySelector(".name").value.trim();
+    const rankScore=Number(row.querySelector(".rank").value);
+    const rankName=s.ranks.find(r=>r.score===rankScore).name;
+    const role1=row.querySelector(".role1").value;
+    const role2=row.querySelector(".role2").value;
+    if(name)members.push({name,rankScore,rankName,role1,role2,id:index});
+  });
+  return members;
+}
+
 function teamScore(team){return team.reduce((sum,m)=>sum+m.rankScore,0)}
 function combination(array,size){const result=[];function backtrack(start,current){if(current.length===size){result.push([...current]);return}for(let i=start;i<array.length;i++){current.push(array[i]);backtrack(i+1,current);current.pop()}}backtrack(0,[]);return result}
 function shuffle(array){const copied=[...array];for(let i=copied.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copied[i],copied[j]]=[copied[j],copied[i]]}return copied}
-function assignRoles(team){const s=currentSettings();const assigned=[];const shuffled=shuffle(team);s.roles.forEach(role=>{let c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&m.role1===role);if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&m.role2===role);if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&(m.role1===s.extraRole||m.role2===s.extraRole));if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id));if(c)assigned.push({...c,assignedRole:role})});return assigned.sort((a,b)=>s.roles.indexOf(a.assignedRole)-s.roles.indexOf(b.assignedRole))}
-function roleEvaluation(team){const s=currentSettings();const assigned=assignRoles(team);let penalty=0;assigned.forEach(m=>{if(m.role1===m.assignedRole)penalty+=0;else if(m.role2===m.assignedRole)penalty+=1;else if(m.role1===s.extraRole||m.role2===s.extraRole)penalty+=2;else penalty+=5});return penalty}
-function balanceTeams(){const warning=document.getElementById("warning"),success=document.getElementById("success");warning.textContent="";success.textContent="";const members=getMembers();if(members.length!==10){warning.textContent=`現在の入力人数は ${members.length} 人です。\n10人で分けるため、名前が入力されたメンバーを10人にしてください。`;return}const evaluated=[];shuffle(combination(members,5)).forEach(teamA=>{const ids=new Set(teamA.map(m=>m.id));const teamB=members.filter(m=>!ids.has(m.id));const scoreDiff=Math.abs(teamScore(teamA)-teamScore(teamB));const rolePenalty=roleEvaluation(teamA)+roleEvaluation(teamB);const totalEvaluation=scoreDiff*10+rolePenalty+Math.random()*2;evaluated.push({teamA,teamB,rolePenalty,totalEvaluation})});evaluated.sort((a,b)=>a.totalEvaluation-b.totalEvaluation);const top=evaluated.slice(0,Math.min(20,evaluated.length));const best=top[Math.floor(Math.random()*top.length)];lastTeamA=assignRoles(best.teamA);lastTeamB=assignRoles(best.teamB);renderTeam("teamA","teamAScore","teamASummary",lastTeamA);renderTeam("teamB","teamBScore","teamBSummary",lastTeamB);updateCopyText();if(best.rolePenalty>0)warning.textContent="注意：ランク差と希望ロールを考慮しているため、一部の人が第一希望以外になる場合があります。";else success.textContent="希望ロールのバランスが良いチーム分けができました。"}
-function renderTeam(teamId,scoreId,summaryId,team){const s=currentSettings();const teamDiv=document.getElementById(teamId);teamDiv.innerHTML="";team.forEach(m=>{const div=document.createElement("div");div.className="player";div.innerHTML=`<span class="role-label">${m.assignedRole}</span><span>${m.name}</span><span>${m.rankName} / 希望:${m.role1}, ${m.role2}</span>`;teamDiv.appendChild(div)});document.getElementById(scoreId).textContent="合計ランクスコア："+teamScore(team);document.getElementById(summaryId).textContent=s.roles.map(role=>{const p=team.find(m=>m.assignedRole===role);return`${role}: ${p?p.name:"なし"}`}).join(" / ")}
-function makeResultText(){const s=currentSettings();if(!lastTeamA.length||!lastTeamB.length)return"";function teamText(name,team){const lines=[`${name}  合計スコア:${teamScore(team)}`];team.forEach(m=>lines.push(`${m.assignedRole}: ${m.name} / ${m.rankName} / 希望:${m.role1}, ${m.role2}`));return lines.join("\n")}return`【${s.label} チーム分け結果】\n\n${teamText("Team A",lastTeamA)}\n\n${teamText("Team B",lastTeamB)}`}
+
+function decideValorantMap(){
+  if(!isValorant())return "";
+  const selected=document.getElementById("valorantMapSelect").value;
+  currentValorantMap=selected==="random"?valorantMaps[Math.floor(Math.random()*valorantMaps.length)]:selected;
+  document.getElementById("selectedMapResult").textContent="選択MAP："+currentValorantMap;
+  return currentValorantMap;
+}
+
+function assignRoles(team){
+  const s=currentSettings();
+  const assigned=[];
+  const shuffled=shuffle(team);
+  s.roles.forEach(role=>{
+    let c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&m.role1===role);
+    if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&m.role2===role);
+    if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id)&&(m.role1===s.extraRole||m.role2===s.extraRole));
+    if(!c)c=shuffled.find(m=>!assigned.some(a=>a.id===m.id));
+    if(c)assigned.push({...c,assignedRole:role});
+  });
+  return assigned.sort((a,b)=>s.roles.indexOf(a.assignedRole)-s.roles.indexOf(b.assignedRole));
+}
+
+function roleEvaluation(team){
+  const s=currentSettings();
+  const assigned=assignRoles(team);
+  let penalty=0;
+  assigned.forEach(m=>{
+    if(m.role1===m.assignedRole)penalty+=0;
+    else if(m.role2===m.assignedRole)penalty+=1;
+    else if(m.role1===s.extraRole||m.role2===s.extraRole)penalty+=2;
+    else penalty+=5;
+  });
+  return penalty;
+}
+
+function balanceTeams(){
+  const warning=document.getElementById("warning"),success=document.getElementById("success");
+  warning.textContent="";success.textContent="";
+  const members=getMembers();
+  if(members.length!==10){warning.textContent=`現在の入力人数は ${members.length} 人です。\n10人で分けるため、名前が入力されたメンバーを10人にしてください。`;return}
+  decideValorantMap();
+  const evaluated=[];
+  shuffle(combination(members,5)).forEach(teamA=>{
+    const ids=new Set(teamA.map(m=>m.id));
+    const teamB=members.filter(m=>!ids.has(m.id));
+    const scoreDiff=Math.abs(teamScore(teamA)-teamScore(teamB));
+    const rolePenalty=roleEvaluation(teamA)+roleEvaluation(teamB);
+    const totalEvaluation=scoreDiff*10+rolePenalty+Math.random()*2;
+    evaluated.push({teamA,teamB,rolePenalty,totalEvaluation});
+  });
+  evaluated.sort((a,b)=>a.totalEvaluation-b.totalEvaluation);
+  const top=evaluated.slice(0,Math.min(20,evaluated.length));
+  const best=top[Math.floor(Math.random()*top.length)];
+  lastTeamA=assignRoles(best.teamA);
+  lastTeamB=assignRoles(best.teamB);
+  renderTeam("teamA","teamAScore","teamASummary",lastTeamA);
+  renderTeam("teamB","teamBScore","teamBSummary",lastTeamB);
+  updateCopyText();
+  if(best.rolePenalty>0)warning.textContent="注意：ランク差と希望ロールを考慮しているため、一部の人が第一希望以外になる場合があります。";
+  else success.textContent="希望ロールのバランスが良いチーム分けができました。";
+}
+
+function renderTeam(teamId,scoreId,summaryId,team){
+  const s=currentSettings();
+  const teamDiv=document.getElementById(teamId);
+  teamDiv.innerHTML="";
+  team.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="player";
+    div.innerHTML=`<span class="role-label">${m.assignedRole}</span><span>${m.name}</span><span>${m.rankName} / 希望:${m.role1}, ${m.role2}</span>`;
+    teamDiv.appendChild(div);
+  });
+  document.getElementById(scoreId).textContent="合計ランクスコア："+teamScore(team);
+  document.getElementById(summaryId).textContent=s.roles.map(role=>{const p=team.find(m=>m.assignedRole===role);return`${role}: ${p?p.name:"なし"}`}).join(" / ");
+}
+
+function makeResultText(){
+  const s=currentSettings();
+  if(!lastTeamA.length||!lastTeamB.length)return"";
+  function teamText(name,team){
+    const lines=[`${name}  合計スコア:${teamScore(team)}`];
+    team.forEach(m=>lines.push(`${m.assignedRole}: ${m.name} / ${m.rankName} / 希望:${m.role1}, ${m.role2}`));
+    return lines.join("\n");
+  }
+  const mapText=isValorant()&&currentValorantMap?`\nMAP：${currentValorantMap}\n`:"";
+  return`【${s.label} チーム分け結果】${mapText}\n${teamText("Team A",lastTeamA)}\n\n${teamText("Team B",lastTeamB)}`;
+}
+
 function updateCopyText(){document.getElementById("copyText").value=makeResultText()}
-function copyResult(){const text=makeResultText();const success=document.getElementById("success");const warning=document.getElementById("warning");success.textContent="";warning.textContent="";if(!text){warning.textContent="先にチーム分けをしてください。";return}navigator.clipboard.writeText(text).then(()=>{success.textContent="結果をコピーしました。Discordなどに貼り付けできます。"}).catch(()=>{document.getElementById("copyText").select();warning.textContent="自動コピーできませんでした。下のテキスト欄を手動でコピーしてください。"})}
+function copyResult(){
+  const text=makeResultText();
+  const success=document.getElementById("success");
+  const warning=document.getElementById("warning");
+  success.textContent="";warning.textContent="";
+  if(!text){warning.textContent="先にチーム分けをしてください。";return}
+  navigator.clipboard.writeText(text).then(()=>{success.textContent="結果をコピーしました。Discordなどに貼り付けできます。"}).catch(()=>{document.getElementById("copyText").select();warning.textContent="自動コピーできませんでした。下のテキスト欄を手動でコピーしてください。"});
+}
+
 resetAll();
 </script>
 </body>
