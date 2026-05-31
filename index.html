@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LOL カスタム チーム分けツール</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .description {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    .member-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    input, select, button {
+      border-radius: 10px;
+      border: 1px solid #475569;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    input, select {
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      font-weight: 700;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .primary {
+      background: #38bdf8;
+      color: #082f49;
+    }
+
+    .secondary {
+      background: #475569;
+      color: #e5e7eb;
+    }
+
+    .danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .teams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .team {
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .team h2 {
+      margin-top: 0;
+    }
+
+    .player {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      background: #1e293b;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .score {
+      color: #facc15;
+      font-weight: 700;
+    }
+
+    .warning {
+      color: #fca5a5;
+      margin-top: 12px;
+      white-space: pre-line;
+    }
+
+    .lane-summary {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 800px) {
+      .member-row {
+        grid-template-columns: 1fr;
+      }
+
+      .teams {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>LOL カスタム チーム分けツール</h1>
+    <p class="description">名前・ランク帯・希望レーンを入力して、平均戦力が近くなるように5vs5へ自動分けします。</p>
+
+    <div class="card">
+      <h2>メンバー入力</h2>
+      <div id="members"></div>
+
+      <div class="buttons">
+        <button class="secondary" onclick="addMember()">メンバー追加</button>
+        <button class="primary" onclick="balanceTeams()">チーム分けする</button>
+        <button class="danger" onclick="resetAll()">リセット</button>
+      </div>
+
+      <div id="warning" class="warning"></div>
+    </div>
+
+    <div class="card">
+      <h2>結果</h2>
+      <div class="teams">
+        <div class="team">
+          <h2>Team A</h2>
+          <div id="teamA"></div>
+          <div id="teamAScore" class="score"></div>
+          <div id="teamALanes" class="lane-summary"></div>
+        </div>
+
+        <div class="team">
+          <h2>Team B</h2>
+          <div id="teamB"></div>
+          <div id="teamBScore" class="score"></div>
+          <div id="teamBLanes" class="lane-summary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ranks = [
+      { name: "Iron", score: 1 },
+      { name: "Bronze", score: 2 },
+      { name: "Silver", score: 3 },
+      { name: "Gold", score: 4 },
+      { name: "Platinum", score: 5 },
+      { name: "Emerald", score: 6 },
+      { name: "Diamond", score: 7 },
+      { name: "Master", score: 8 },
+      { name: "Grandmaster", score: 9 },
+      { name: "Challenger", score: 10 }
+    ];
+
+    const lanes = ["TOP", "JG", "MID", "ADC", "SUP", "どこでも"];
+    const membersDiv = document.getElementById("members");
+
+    function createMemberRow(index) {
+      const row = document.createElement("div");
+      row.className = "member-row";
+
+      row.innerHTML = `
+        <input type="text" placeholder="メンバー${index + 1}の名前" class="name" />
+        <select class="rank">
+          ${ranks.map(r => `<option value="${r.score}">${r.name}</option>`).join("")}
+        </select>
+        <select class="lane">
+          ${lanes.map(l => `<option value="${l}">${l}</option>`).join("")}
+        </select>
+      `;
+
+      membersDiv.appendChild(row);
+    }
+
+    function addMember() {
+      createMemberRow(document.querySelectorAll(".member-row").length);
+    }
+
+    function resetAll() {
+      membersDiv.innerHTML = "";
+      document.getElementById("teamA").innerHTML = "";
+      document.getElementById("teamB").innerHTML = "";
+      document.getElementById("teamAScore").textContent = "";
+      document.getElementById("teamBScore").textContent = "";
+      document.getElementById("teamALanes").textContent = "";
+      document.getElementById("teamBLanes").textContent = "";
+      document.getElementById("warning").textContent = "";
+      for (let i = 0; i < 10; i++) createMemberRow(i);
+    }
+
+    function getMembers() {
+      const rows = document.querySelectorAll(".member-row");
+      const members = [];
+
+      rows.forEach((row, index) => {
+        const name = row.querySelector(".name").value.trim();
+        const rankScore = Number(row.querySelector(".rank").value);
+        const rankName = ranks.find(r => r.score === rankScore).name;
+        const lane = row.querySelector(".lane").value;
+
+        if (name) {
+          members.push({ name, rankScore, rankName, lane, id: index });
+        }
+      });
+
+      return members;
+    }
+
+    function teamScore(team) {
+      return team.reduce((sum, member) => sum + member.rankScore, 0);
+    }
+
+    function lanePenalty(team) {
+      const laneCount = {};
+      let penalty = 0;
+
+      team.forEach(member => {
+        if (member.lane !== "どこでも") {
+          laneCount[member.lane] = (laneCount[member.lane] || 0) + 1;
+        }
+      });
+
+      Object.values(laneCount).forEach(count => {
+        if (count > 1) penalty += (count - 1) * 2;
+      });
+
+      return penalty;
+    }
+
+    function combination(array, size) {
+      const result = [];
+
+      function backtrack(start, current) {
+        if (current.length === size) {
+          result.push([...current]);
+          return;
+        }
+
+        for (let i = start; i < array.length; i++) {
+          current.push(array[i]);
+          backtrack(i + 1, current);
+          current.pop();
+        }
+      }
+
+      backtrack(0, []);
+      return result;
+    }
+
+    function balanceTeams() {
+      const warning = document.getElementById("warning");
+      warning.textContent = "";
+
+      const members = getMembers();
+
+      if (members.length !== 10) {
+        warning.textContent = "現在の入力人数は " + members.length + " 人です。\n5vs5で分けるため、名前が入力されたメンバーを10人にしてください。";
+        return;
+      }
+
+      const combos = combination(members, 5);
+      let best = null;
+      let bestScore = Infinity;
+
+      combos.forEach(teamA => {
+        const ids = new Set(teamA.map(m => m.id));
+        const teamB = members.filter(m => !ids.has(m.id));
+
+        const scoreDiff = Math.abs(teamScore(teamA) - teamScore(teamB));
+        const penalty = lanePenalty(teamA) + lanePenalty(teamB);
+        const totalEvaluation = scoreDiff * 10 + penalty;
+
+        if (totalEvaluation < bestScore) {
+          bestScore = totalEvaluation;
+          best = { teamA, teamB, scoreDiff, penalty };
+        }
+      });
+
+      renderTeam("teamA", "teamAScore", "teamALanes", best.teamA);
+      renderTeam("teamB", "teamBScore", "teamBLanes", best.teamB);
+
+      if (best.penalty > 0) {
+        warning.textContent = "注意：ランク差を優先しているため、一部レーンが被っている可能性があります。";
+      }
+    }
+
+    function renderTeam(teamId, scoreId, laneId, team) {
+      const teamDiv = document.getElementById(teamId);
+      const scoreDiv = document.getElementById(scoreId);
+      const laneDiv = document.getElementById(laneId);
+
+      teamDiv.innerHTML = "";
+
+      team.forEach(member => {
+        const div = document.createElement("div");
+        div.className = "player";
+        div.innerHTML = `
+          <span>${member.name}</span>
+          <span>${member.rankName} / ${member.lane}</span>
+        `;
+        teamDiv.appendChild(div);
+      });
+
+      scoreDiv.textContent = "合計ランクスコア：" + teamScore(team);
+
+      const laneText = lanes
+        .filter(l => l !== "どこでも")
+        .map(lane => {
+          const names = team.filter(m => m.lane === lane).map(m => m.name);
+          return `${lane}: ${names.length ? names.join("、") : "なし"}`;
+        })
+        .join(" / ");
+
+      laneDiv.textContent = laneText;
+    }
+
+    resetAll();
+  </script>
+</body>
+</html>
